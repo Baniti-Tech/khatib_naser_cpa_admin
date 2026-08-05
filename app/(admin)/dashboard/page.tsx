@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { StatCard } from "@/components/StatCard";
 import { SimpleBarChart } from "@/components/SimpleBarChart";
-import { getAnalyticsSummary } from "@/lib/db";
+import { getDashboardData } from "@/lib/dashboard-data";
 import { CONTENT_SECTIONS } from "@/lib/content-schema";
 
 export default async function DashboardPage() {
-  const { summary, daily } = await getAnalyticsSummary();
+  const { summary, daily, source, businessName, error } = await getDashboardData();
   const delta =
     summary.visitsYesterday === 0
       ? "—"
@@ -16,8 +16,16 @@ export default async function DashboardPage() {
       <header>
         <h1 className="text-3xl font-extrabold text-brand-navy">סקירה כללית</h1>
         <p className="mt-2 text-brand-dark/60">
-          ביקורים, מעורבות יומית ועריכת תוכן האתר — כרגע עם נתוני דמו עד חיבור Cloud SQL.
+          {businessName
+            ? `נתונים עבור ${businessName}`
+            : "ביקורים, מעורבות ועריכת תוכן האתר"}
+          {source === "mock" ? " · מצב דמו" : " · מחובר ל־API"}
         </p>
+        {error ? (
+          <p className="mt-2 text-sm text-amber-700">
+            שגיאת API (מוצגים נתוני גיבוי): {error}
+          </p>
+        ) : null}
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -25,7 +33,7 @@ export default async function DashboardPage() {
           label="ביקורים היום"
           value={summary.visitsToday}
           trend={delta}
-          hint="page_visits"
+          hint="page_views"
         />
         <StatCard
           label="ביקורים 7 ימים"
@@ -38,9 +46,9 @@ export default async function DashboardPage() {
           hint="לחיצות / טפסים"
         />
         <StatCard
-          label="וואטסאפ 7 ימים"
-          value={summary.whatsapp7d}
-          hint="engagement_events"
+          label="לידים"
+          value={summary.totalLeads}
+          hint="total leads"
         />
       </div>
 

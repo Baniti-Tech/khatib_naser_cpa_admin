@@ -1,23 +1,30 @@
+import { isApiConfigured, getApiBaseUrl } from "@/lib/cloud-run";
+
 const CHECKS = [
   {
-    key: "DATABASE_URL",
-    label: "Cloud SQL",
-    hint: "מחרוזת חיבור PostgreSQL / Cloud SQL Auth Proxy",
+    key: "SHARED_SITES_API_URL",
+    label: "Shared Sites API URL",
+    hint: "כתובת Cloud Run של ה־API",
   },
   {
-    key: "GCS_BUCKET",
-    label: "Cloud Storage bucket",
-    hint: "שם ה-bucket לתמונות האתר",
+    key: "GCP_PROJECT_NUMBER",
+    label: "GCP project number",
+    hint: "ל־Workload Identity Federation",
   },
   {
-    key: "GCS_PROJECT_ID",
-    label: "GCP project id",
-    hint: "מזהה הפרויקט ב-Google Cloud",
+    key: "GCP_SERVICE_ACCOUNT_EMAIL",
+    label: "Caller service account",
+    hint: "vercel-sites-caller@…",
   },
   {
-    key: "ADMIN_PASSWORD",
-    label: "סיסמת אדמין",
-    hint: "להחלפה באימות אמיתי לפני פרודקשן",
+    key: "GCP_WORKLOAD_IDENTITY_POOL_ID",
+    label: "WIF pool ID",
+    hint: "בדרך כלל vercel",
+  },
+  {
+    key: "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID",
+    label: "WIF provider ID",
+    hint: "בדרך כלל vercel",
   },
   {
     key: "PUBLIC_SITE_URL",
@@ -32,27 +39,30 @@ export default function SettingsPage() {
     configured: Boolean(process.env[item.key]),
   }));
 
-  const mockMode = process.env.USE_MOCK_DATA !== "false";
+  const apiReady = isApiConfigured();
 
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-extrabold text-brand-navy">הגדרות GCP</h1>
+        <h1 className="text-3xl font-extrabold text-brand-navy">הגדרות חיבור</h1>
         <p className="mt-2 text-brand-dark/60">
-          סטטוס משתני סביבה. מלאו את <code className="font-mono">.env.local</code> לפי{" "}
-          <code className="font-mono">.env.example</code> אחרי יצירת הפרויקט ב-GCP.
+          האדמין קורא ל־Cloud Run דרך Vercel OIDC → WIF. אין צורך ב־Cloud SQL או מפתחות SA ב־Vercel.
         </p>
       </header>
 
       <div
         className={`rounded-2xl border px-5 py-4 text-sm ${
-          mockMode
-            ? "border-amber-200 bg-amber-50 text-amber-900"
-            : "border-green-200 bg-green-50 text-green-900"
+          apiReady
+            ? "border-green-200 bg-green-50 text-green-900"
+            : "border-amber-200 bg-amber-50 text-amber-900"
         }`}
       >
-        מצב נוכחי:{" "}
-        <strong>{mockMode ? "USE_MOCK_DATA=true (דמו)" : "מחובר לנתונים אמיתיים"}</strong>
+        מצב:{" "}
+        <strong>
+          {apiReady
+            ? `מחובר ל־API (${getApiBaseUrl()})`
+            : "חסרים משתני WIF / API — מצב דמו מקומי"}
+        </strong>
       </div>
 
       <div className="rounded-2xl border border-border bg-white shadow-sm">
@@ -84,13 +94,15 @@ export default function SettingsPage() {
       </div>
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-brand-navy">צעדים מומלצים ב-GCP</h2>
+        <h2 className="text-lg font-bold text-brand-navy">צעדים הבאים</h2>
         <ol className="mt-4 list-decimal space-y-2 pr-5 text-sm text-brand-dark/75">
-          <li>יצירת Google Cloud Project</li>
-          <li>Cloud SQL (PostgreSQL) + הרצת <code className="font-mono">sql/schema.sql</code></li>
-          <li>Cloud Storage bucket לתמונות + הרשאות קריאה ציבוריות / CDN</li>
-          <li>Service account עם הרשאות SQL + Storage</li>
-          <li>הוספת משתני סביבה ב-Vercel (GitHub deploy) והעברת USE_MOCK_DATA=false</li>
+          <li>ודאו שמשתני ה־WIF מוגדרים בפרויקט Vercel (Production)</li>
+          <li>
+            צרו משתמש אדמין ב־API עם{" "}
+            <code className="font-mono">npm run bootstrap:admin</code>
+          </li>
+          <li>התחברו כאן עם האימייל והסיסמה של האדמין</li>
+          <li>פרסמו את האתר naser-cpa כשמוכנים לתוכן ציבורי</li>
         </ol>
       </section>
     </div>

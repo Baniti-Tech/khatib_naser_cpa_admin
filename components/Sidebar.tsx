@@ -42,8 +42,18 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-white/10 p-4 text-xs text-white/50">
-        מצב תבנית · נתוני דמו עד חיבור GCP
+      <div className="border-t border-white/10 p-4 space-y-3">
+        <button
+          type="button"
+          onClick={async () => {
+            await fetch("/api/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+          className="w-full rounded-xl bg-white/10 px-3 py-2 text-xs font-medium text-white/90 hover:bg-white/15"
+        >
+          התנתקות
+        </button>
+        <p className="text-xs text-white/50">Baniti · shared-sites-api</p>
       </div>
     </aside>
   );
