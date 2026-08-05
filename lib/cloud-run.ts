@@ -26,6 +26,12 @@ async function getCloudRunIdToken(audience: string): Promise<string> {
   const poolId = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID!;
   const providerId = process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID!;
   const saEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL!;
+  // Must match WIF provider --allowed-audiences (setup-vercel-wif.sh).
+  // Do NOT pass google-auth's supplier context into getVercelOidcToken —
+  // that context.audience is the WIF resource name (//iam.googleapis.com/...)
+  // and would mint a Vercel token GCP rejects.
+  const vercelOidcAudience =
+    process.env.VERCEL_OIDC_AUDIENCE ?? "https://oidc.vercel.com/baniti";
 
   const authClient = ExternalAccountClient.fromJSON({
     type: "external_account",
@@ -34,7 +40,8 @@ async function getCloudRunIdToken(audience: string): Promise<string> {
     token_url: "https://sts.googleapis.com/v1/token",
     service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${saEmail}:generateAccessToken`,
     subject_token_supplier: {
-      getSubjectToken: getVercelOidcToken,
+      getSubjectToken: async () =>
+        getVercelOidcToken({ audience: vercelOidcAudience }),
     },
   });
 
