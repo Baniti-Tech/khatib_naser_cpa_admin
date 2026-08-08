@@ -17,10 +17,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-64 shrink-0 flex-col border-l border-border bg-brand-navy text-white">
       <div className="border-b border-white/10 px-5 py-6">
-        <p className="text-xs font-medium tracking-wide text-brand-light">
-          Baniti Admin · chart-v3
-        </p>
-        <h1 className="mt-1 text-lg font-bold">חטיב את נאסר</h1>
+        <h1 className="text-lg font-bold">חטיב את נאסר</h1>
         <p className="mt-1 text-sm text-white/60">לוח בקרה לאתר</p>
       </div>
 
@@ -55,7 +52,6 @@ export function Sidebar() {
         >
           התנתקות
         </button>
-        <p className="text-xs text-white/50">Baniti · shared-sites-api</p>
       </div>
     </aside>
   );

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("contact@baniti.co.il");
+  const [email, setEmail] = useState("osama.n.cpa@gmail.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,10 +45,9 @@ function LoginForm() {
       onSubmit={onSubmit}
       className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl"
     >
-      <p className="text-sm font-medium text-brand-medium">Baniti Admin · chart-v3</p>
-      <h1 className="mt-2 text-2xl font-bold text-brand-navy">התחברות</h1>
+      <h1 className="text-2xl font-bold text-brand-navy">התחברות</h1>
       <p className="mt-2 text-sm text-brand-dark/60">
-        התחברות ל־shared-sites-api דרך Cloud Run (OIDC).
+        כניסה ללוח הבקרה של האתר
       </p>
 
       <label className="mt-6 block text-sm font-semibold text-brand-navy">

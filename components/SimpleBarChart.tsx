@@ -18,9 +18,7 @@ export function SimpleBarChart({
     <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
       <div className="mb-2 flex items-end justify-between">
         <h3 className="font-bold text-brand-navy">ביקורים יומיים</h3>
-        <span className="text-xs text-brand-dark/50">
-          14 ימים · chart-v3
-        </span>
+        <span className="text-xs text-brand-dark/50">14 ימים אחרונים</span>
       </div>
       {nonZero.length > 0 ? (
         <p className="mb-3 text-xs font-medium text-brand-medium">
