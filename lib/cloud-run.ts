@@ -3,10 +3,16 @@ import { getVercelOidcToken } from "@vercel/oidc";
 
 const API_URL = process.env.SHARED_SITES_API_URL?.replace(/\/$/, "") ?? "";
 
+export function isLocalApi() {
+  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/i.test(API_URL);
+}
+
+/** Local API needs only SHARED_SITES_API_URL. Cloud Run also needs WIF env vars. */
 export function isApiConfigured() {
+  if (!API_URL) return false;
+  if (isLocalApi()) return true;
   return Boolean(
-    API_URL &&
-      process.env.GCP_PROJECT_NUMBER &&
+    process.env.GCP_PROJECT_NUMBER &&
       process.env.GCP_SERVICE_ACCOUNT_EMAIL &&
       process.env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
       process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
@@ -26,10 +32,6 @@ async function getCloudRunIdToken(audience: string): Promise<string> {
   const poolId = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID!;
   const providerId = process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID!;
   const saEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL!;
-  // Must match WIF provider --allowed-audiences (setup-vercel-wif.sh).
-  // Do NOT pass google-auth's supplier context into getVercelOidcToken —
-  // that context.audience is the WIF resource name (//iam.googleapis.com/...)
-  // and would mint a Vercel token GCP rejects.
   const vercelOidcAudience =
     process.env.VERCEL_OIDC_AUDIENCE ?? "https://oidc.vercel.com/baniti";
 
@@ -89,15 +91,22 @@ export async function apiFetch(
   }
 
   const url = `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
-  const idToken = await getCloudRunIdToken(API_URL);
-
   const headers = new Headers(init.headers);
-  if (appJwt) {
-    headers.set("Authorization", `Bearer ${appJwt}`);
-    headers.set("X-Serverless-Authorization", `Bearer ${idToken}`);
+
+  if (isLocalApi()) {
+    if (appJwt) {
+      headers.set("Authorization", `Bearer ${appJwt}`);
+    }
   } else {
-    headers.set("Authorization", `Bearer ${idToken}`);
+    const idToken = await getCloudRunIdToken(API_URL);
+    if (appJwt) {
+      headers.set("Authorization", `Bearer ${appJwt}`);
+      headers.set("X-Serverless-Authorization", `Bearer ${idToken}`);
+    } else {
+      headers.set("Authorization", `Bearer ${idToken}`);
+    }
   }
+
   if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
   }

@@ -90,7 +90,9 @@ export async function listSites(businessId: string) {
     token,
   );
   if (!res.ok) throw new Error("Failed to list sites");
-  return res.json();
+  return res.json() as Promise<
+    Array<{ id: string; slug: string }> | { items: Array<{ id: string; slug: string }> }
+  >;
 }
 
 export { isApiConfigured };

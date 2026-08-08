@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ContentSection } from "@/lib/content-schema";
 
 export function ContentEditor({ section }: { section: ContentSection }) {
@@ -16,6 +16,26 @@ export function ContentEditor({ section }: { section: ContentSection }) {
   const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/content?sectionId=${section.id}`);
+        const data = await res.json();
+        if (cancelled || !data.ok || !data.values) return;
+        setValues((prev) => ({ ...prev, ...data.values }));
+        if (data.mode === "api") {
+          setStatus("נטען מה-CMS");
+        }
+      } catch {
+        /* keep defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [section.id]);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -28,7 +48,13 @@ export function ContentEditor({ section }: { section: ContentSection }) {
         body: JSON.stringify({ sectionId: section.id, values }),
       });
       const data = await res.json();
-      setStatus(data.ok ? "נשמר (מצב דמו / stub)" : data.error ?? "שגיאה בשמירה");
+      setStatus(
+        data.ok
+          ? data.mode === "api"
+            ? "נשמר ב-CMS (test DB)"
+            : "נשמר (מצב דמו)"
+          : data.error ?? "שגיאה בשמירה",
+      );
     } catch {
       setStatus("שגיאת רשת");
     } finally {
