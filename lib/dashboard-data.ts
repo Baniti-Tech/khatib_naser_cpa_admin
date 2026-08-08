@@ -56,11 +56,14 @@ function mapStats(stats: StatisticsResponse): Omit<DashboardView, "source" | "bu
     days.reduce((sum, d) => sum + (byDay.get(d) ?? 0), 0);
 
   const visitsFromBuckets = sumDays(days7);
-  const visits7d = visitsFromBuckets || stats.pageViews;
-  const visitsToday =
+  const visits7d = visitsFromBuckets > 0 ? visitsFromBuckets : stats.pageViews;
+  const todayFromBuckets =
     byDay.get(today) ??
-    (latestApiDay ? (byDay.get(latestApiDay) ?? 0) : 0) ||
-    stats.pageViews;
+    (latestApiDay !== undefined ? byDay.get(latestApiDay) : undefined);
+  const visitsToday =
+    todayFromBuckets !== undefined && todayFromBuckets > 0
+      ? todayFromBuckets
+      : stats.pageViews;
 
   const engagements7d =
     stats.ctaClicks +
