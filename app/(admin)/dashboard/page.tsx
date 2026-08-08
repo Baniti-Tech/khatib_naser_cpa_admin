@@ -4,6 +4,8 @@ import { SimpleBarChart } from "@/components/SimpleBarChart";
 import { getDashboardData } from "@/lib/dashboard-data";
 import { CONTENT_SECTIONS } from "@/lib/content-schema";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const { summary, daily, source, businessName, error } = await getDashboardData();
   const delta =

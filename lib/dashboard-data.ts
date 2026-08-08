@@ -40,30 +40,37 @@ function lastNDays(n: number): string[] {
 
 function mapStats(stats: StatisticsResponse): Omit<DashboardView, "source" | "businessName" | "error"> {
   // API buckets by UTC day (same as toISOString().slice(0, 10))
-  const byDay = new Map(
-    stats.eventsByDay.map((d) => [String(d.day).slice(0, 10), Number(d.count) || 0]),
-  );
-  // Always include API days so chart never drops real buckets (timezone / clock skew)
-  const days14 = [
-    ...new Set([...lastNDays(14), ...byDay.keys()]),
-  ].sort();
+  const byDay = new Map<string, number>();
+  for (const row of stats.eventsByDay ?? []) {
+    const day = String(row.day ?? "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    byDay.set(day, (byDay.get(day) ?? 0) + (Number(row.count) || 0));
+  }
+
+  const days14 = lastNDays(14);
   const days7 = lastNDays(7);
   const today = utcDayString(0);
   const yesterday = utcDayString(-1);
-  const latestApiDay = [...byDay.keys()].sort().at(-1);
+
+  // If API day falls outside the padded window (clock skew), still attach it
+  for (const day of byDay.keys()) {
+    if (!days14.includes(day)) {
+      days14.push(day);
+      days14.sort();
+    }
+  }
+
+  // Cards can fall back to pageViews; chart must not stay empty when buckets are missing
+  if (byDay.size === 0 && stats.pageViews > 0) {
+    byDay.set(today, stats.pageViews);
+  }
 
   const sumDays = (days: string[]) =>
     days.reduce((sum, d) => sum + (byDay.get(d) ?? 0), 0);
 
   const visitsFromBuckets = sumDays(days7);
   const visits7d = visitsFromBuckets > 0 ? visitsFromBuckets : stats.pageViews;
-  const todayFromBuckets =
-    byDay.get(today) ??
-    (latestApiDay !== undefined ? byDay.get(latestApiDay) : undefined);
-  const visitsToday =
-    todayFromBuckets !== undefined && todayFromBuckets > 0
-      ? todayFromBuckets
-      : stats.pageViews;
+  const visitsToday = byDay.get(today) ?? stats.pageViews;
 
   const engagements7d =
     stats.ctaClicks +
@@ -88,7 +95,7 @@ function mapStats(stats: StatisticsResponse): Omit<DashboardView, "source" | "bu
       engagements: byDay.get(date) ?? 0,
       whatsappClicks: 0,
     })),
-    topPaths: stats.mostViewedPaths.map((p) => ({
+    topPaths: (stats.mostViewedPaths ?? []).map((p) => ({
       path: p.pagePath ?? "/",
       label: p.pagePath ?? "דף הבית",
       views: p.count,
