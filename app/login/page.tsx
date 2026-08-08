@@ -45,7 +45,7 @@ function LoginForm() {
       onSubmit={onSubmit}
       className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl"
     >
-      <p className="text-sm font-medium text-brand-medium">Baniti Admin</p>
+      <p className="text-sm font-medium text-brand-medium">Baniti Admin · chart-v3</p>
       <h1 className="mt-2 text-2xl font-bold text-brand-navy">התחברות</h1>
       <p className="mt-2 text-sm text-brand-dark/60">
         התחברות ל־shared-sites-api דרך Cloud Run (OIDC).
