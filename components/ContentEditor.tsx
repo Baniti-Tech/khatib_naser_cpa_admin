@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ContentSection } from "@/lib/content-schema";
+import { ImageField, type FieldStatus } from "@/components/ImageField";
 
 export function ContentEditor({ section }: { section: ContentSection }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -13,7 +14,8 @@ export function ContentEditor({ section }: { section: ContentSection }) {
     }
     return initial;
   });
-  const [status, setStatus] = useState<string | null>(null);
+  const [mediaIds, setMediaIds] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<FieldStatus | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -22,10 +24,21 @@ export function ContentEditor({ section }: { section: ContentSection }) {
       try {
         const res = await fetch(`/api/content?sectionId=${section.id}`);
         const data = await res.json();
-        if (cancelled || !data.ok || !data.values) return;
-        setValues((prev) => ({ ...prev, ...data.values }));
+        if (cancelled || !data.ok) return;
+        if (data.values) {
+          setValues((prev) => ({ ...prev, ...data.values }));
+        }
+        if (data.mediaIds) {
+          setMediaIds(data.mediaIds);
+        }
         if (data.mode === "api") {
-          setStatus("נטען מה-CMS");
+          setStatus({ type: "info", message: "נטען מהאתר החי" });
+        } else if (data.mode === "disconnected") {
+          setStatus({
+            type: "warning",
+            message:
+              "אין חיבור ל-CMS בסביבה הזו. שמירה לאתר החי דורשת התחברות ל-API ב-Vercel.",
+          });
         }
       } catch {
         /* keep defaults */
@@ -45,28 +58,53 @@ export function ContentEditor({ section }: { section: ContentSection }) {
       const res = await fetch("/api/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectionId: section.id, values }),
+        body: JSON.stringify({
+          sectionId: section.id,
+          values,
+          mediaIds,
+        }),
       });
       const data = await res.json();
-      setStatus(
-        data.ok
-          ? data.mode === "api"
-            ? "נשמר ב-CMS (test DB)"
-            : "נשמר (מצב דמו)"
-          : data.error ?? "שגיאה בשמירה",
-      );
+      if (data.ok) {
+        setStatus({
+          type: "success",
+          message:
+            "נשמר במסד הנתונים של האתר החי. khatib-naser.co.il יתעדכן תוך עד דקה.",
+        });
+      } else {
+        setStatus({
+          type: "error",
+          message: data.error ?? "השמירה לאתר החי נכשלה.",
+        });
+      }
     } catch {
-      setStatus("שגיאת רשת");
+      setStatus({ type: "error", message: "שגיאת רשת — נסו שוב" });
     } finally {
       setSaving(false);
     }
   }
 
+  const statusClass =
+    status?.type === "error"
+      ? "border-red-200 bg-red-50 text-red-800"
+      : status?.type === "warning"
+        ? "border-amber-200 bg-amber-50 text-amber-900"
+        : status?.type === "success"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-brand-pale bg-brand-pale/60 text-brand-navy";
+
   return (
     <form onSubmit={handleSave} className="space-y-5">
       <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-brand-navy">{section.title}</h2>
-        <p className="mt-1 text-sm text-brand-dark/60">{section.description}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-brand-navy">{section.title}</h2>
+            <p className="mt-1 text-sm text-brand-dark/60">{section.description}</p>
+          </div>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+            נשמר לאתר החי
+          </span>
+        </div>
       </div>
 
       {section.fields.map((field) => (
@@ -79,43 +117,17 @@ export function ContentEditor({ section }: { section: ContentSection }) {
           </label>
 
           {field.type === "image" ? (
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={values[field.key] ?? ""}
-                onChange={(e) =>
-                  setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+            <ImageField
+              value={values[field.key] ?? ""}
+              imageSlot={field.imageSlot}
+              onChange={({ url, mediaId }) => {
+                setValues((prev) => ({ ...prev, [field.key]: url }));
+                if (mediaId) {
+                  setMediaIds((prev) => ({ ...prev, [field.key]: mediaId }));
                 }
-                className="w-full rounded-xl border border-border px-3 py-2 outline-none focus:border-brand-medium"
-                dir="ltr"
-              />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file || !field.imageSlot) return;
-                  const body = new FormData();
-                  body.append("file", file);
-                  body.append("slotKey", field.imageSlot);
-                  const res = await fetch("/api/upload", { method: "POST", body });
-                  const data = await res.json();
-                  if (data.ok && data.publicUrl) {
-                    setValues((prev) => ({
-                      ...prev,
-                      [field.key]: data.publicUrl,
-                    }));
-                    setStatus("העלאה בוצעה (מצב דמו / stub)");
-                  } else {
-                    setStatus(data.error ?? "העלאה נכשלה");
-                  }
-                }}
-                className="block w-full text-sm"
-              />
-              <p className="text-xs text-brand-dark/45">
-                slot: {field.imageSlot} · יישמר ב-GCS אחרי ההגדרה
-              </p>
-            </div>
+              }}
+              onStatus={setStatus}
+            />
           ) : field.type === "textarea" || field.type === "list" ? (
             <textarea
               rows={field.type === "list" ? 8 : 5}
@@ -139,18 +151,19 @@ export function ContentEditor({ section }: { section: ContentSection }) {
         </div>
       ))}
 
-      <div className="flex items-center justify-between gap-4">
-        {status ? (
-          <p className="text-sm text-brand-medium">{status}</p>
-        ) : (
-          <span />
-        )}
+      {status ? (
+        <div className={`rounded-2xl border px-5 py-3 text-sm ${statusClass}`}>
+          {status.message}
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-end gap-4">
         <button
           type="submit"
           disabled={saving}
           className="rounded-xl bg-brand-navy px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-dark disabled:opacity-60"
         >
-          {saving ? "שומר..." : "שמור שינויים"}
+          {saving ? "שומר..." : "שמור לאתר החי"}
         </button>
       </div>
     </form>

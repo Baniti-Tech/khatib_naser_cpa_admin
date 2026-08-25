@@ -7,7 +7,8 @@ export default function ContentIndexPage() {
       <header>
         <h1 className="text-3xl font-extrabold text-brand-navy">ניהול תוכן</h1>
         <p className="mt-2 text-brand-dark/60">
-          כל מקטע תואם לקומפוננטה באתר הציבורי. אחרי GCP, השמירה תלך ל-Cloud SQL והתמונות ל-GCS.
+          שמירה כאן כותבת למסד הנתונים של האתר החי. השינוי יופיע ב-
+          khatib-naser.co.il אחרי הרענון הבא.
         </p>
       </header>
 
@@ -23,8 +24,8 @@ export default function ContentIndexPage() {
                 <h2 className="text-lg font-bold text-brand-navy">{section.title}</h2>
                 <p className="mt-2 text-sm text-brand-dark/60">{section.description}</p>
               </div>
-              <span className="rounded-full bg-brand-pale px-3 py-1 text-xs font-semibold text-brand-dark">
-                {section.fields.length} שדות
+              <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                אתר חי
               </span>
             </div>
           </Link>

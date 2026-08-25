@@ -107,7 +107,9 @@ export async function apiFetch(
     }
   }
 
-  if (!headers.has("Content-Type") && init.body) {
+  const isFormData =
+    typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (!headers.has("Content-Type") && init.body && !isFormData) {
     headers.set("Content-Type", "application/json");
   }
 

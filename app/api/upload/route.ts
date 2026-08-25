@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
-import { uploadImage } from "@/lib/storage";
+import { isApiConfigured } from "@/lib/cloud-run";
+import { uploadSiteMedia } from "@/lib/cms-site";
+import { categoryFromSlot, mediaPreviewUrl } from "@/lib/cms-map";
 
 export async function POST(request: Request) {
+  if (!isApiConfigured()) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "אין חיבור ל-CMS. העלאת תמונות עובדת רק כשהאדמין מחובר ל-API האמיתי.",
+      },
+      { status: 503 },
+    );
+  }
+
   const form = await request.formData();
   const file = form.get("file");
   const slotKey = String(form.get("slotKey") ?? "");
@@ -9,21 +22,29 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || !slotKey) {
     return NextResponse.json(
       { ok: false, error: "file and slotKey are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const result = await uploadImage({
-    slotKey,
-    fileName: file.name,
-    contentType: file.type || "application/octet-stream",
-    bytes,
-  });
-
-  if (!result.ok) {
-    return NextResponse.json(result, { status: 500 });
+  try {
+    const media = await uploadSiteMedia({
+      file,
+      category: categoryFromSlot(slotKey),
+      altText: slotKey,
+    });
+    if (!media.id) {
+      return NextResponse.json(
+        { ok: false, error: "ההעלאה הצליחה אבל לא התקבל מזהה מדיה" },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      mediaId: media.id,
+      publicUrl: mediaPreviewUrl(media.id),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Upload failed";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  return NextResponse.json(result);
 }

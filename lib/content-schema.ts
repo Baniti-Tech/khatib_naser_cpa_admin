@@ -33,13 +33,6 @@ export const CONTENT_SECTIONS: ContentSection[] = [
       { key: "phoneDisplay", label: "טלפון להצגה", type: "phone", value: "054-984-3929" },
       { key: "phone", label: "טלפון (קישור tel:)", type: "phone", value: "+972549843929" },
       { key: "whatsappNumber", label: "מספר וואטסאפ", type: "phone", value: "972549843929" },
-      {
-        key: "logo",
-        label: "לוגו",
-        type: "image",
-        value: "/logos/logo.jpeg",
-        imageSlot: "brand.logo",
-      },
     ],
   },
   {
@@ -130,7 +123,7 @@ export const CONTENT_SECTIONS: ContentSection[] = [
   {
     id: "whyUs",
     title: "למה אנחנו",
-    description: "ערכים ותמונת רקע",
+    description: "ערכים ותיאור",
     fields: [
       { key: "eyebrow", label: "תווית", type: "text", value: "למה לבחור בנו" },
       { key: "title", label: "כותרת", type: "text", value: "רמה אחרת של שירות" },
@@ -140,13 +133,6 @@ export const CONTENT_SECTIONS: ContentSection[] = [
         type: "textarea",
         value:
           "מעל עשור של פעילות, המשרד שם לעצמו למטרה לספק ביטחון כלכלי, בסיס יציב והזדמנויות צמיחה לכל לקוח — בגישה מקצועית, אישית וחדשנית.",
-      },
-      {
-        key: "background",
-        label: "תמונת רקע",
-        type: "image",
-        value: "/images/office-meeting.jpeg",
-        imageSlot: "whyUs.background",
       },
     ],
   },
@@ -285,13 +271,6 @@ export const CONTENT_SECTIONS: ContentSection[] = [
         type: "textarea",
         value:
           "מלאו את הטופס ונחזור אליכם בוואטסאפ, או צרו קשר ישירות — אנחנו כאן בשבילכם.",
-      },
-      {
-        key: "background",
-        label: "תמונת רקע",
-        type: "image",
-        value: "/images/office-reception.jpeg",
-        imageSlot: "contact.background",
       },
     ],
   },

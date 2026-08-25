@@ -7,6 +7,20 @@ export type SiteContext = {
   pageId: string;
 };
 
+export type CmsSection = {
+  id: string;
+  key: string;
+  sectionType: string;
+  content: Record<string, unknown>;
+  sortOrder?: number;
+  isEnabled?: boolean;
+};
+
+export type UploadedMedia = {
+  id: string;
+  originalFilename?: string;
+};
+
 export async function getNaserCpaContext(): Promise<SiteContext> {
   const token = await requireAccessToken();
   const businesses = await listBusinesses();
@@ -36,7 +50,7 @@ export async function getNaserCpaContext(): Promise<SiteContext> {
   return { businessId: business.id, siteId: site.id, pageId: page.id };
 }
 
-export async function getSectionByKey(ctx: SiteContext, key: string) {
+export async function listPageSections(ctx: SiteContext): Promise<CmsSection[]> {
   const token = await requireAccessToken();
   const res = await apiFetch(
     `/admin/businesses/${ctx.businessId}/sites/${ctx.siteId}/pages/${ctx.pageId}/sections`,
@@ -46,14 +60,82 @@ export async function getSectionByKey(ctx: SiteContext, key: string) {
   if (!res.ok) throw new Error("Failed to list sections");
   const data = await res.json();
   const items = Array.isArray(data) ? data : data.items ?? [];
-  const section = items.find((s: { key?: string }) => s.key === key);
+  return items as CmsSection[];
+}
+
+export async function getSectionByKey(ctx: SiteContext, key: string) {
+  const section = (await listPageSections(ctx)).find((s) => s.key === key);
   if (!section) throw new Error(`Section not found: ${key}`);
-  return section as {
-    id: string;
+  return section;
+}
+
+export async function createSection(
+  ctx: SiteContext,
+  params: {
     key: string;
     sectionType: string;
     content: Record<string, unknown>;
-  };
+    sortOrder?: number;
+  },
+) {
+  const token = await requireAccessToken();
+  const res = await apiFetch(
+    `/admin/businesses/${ctx.businessId}/sites/${ctx.siteId}/pages/${ctx.pageId}/sections`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        key: params.key,
+        sectionType: params.sectionType,
+        content: params.content,
+        sortOrder: params.sortOrder ?? 0,
+        isEnabled: true,
+      }),
+    },
+    token,
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Create section failed (${res.status}): ${text}`);
+  }
+  return (await res.json()) as CmsSection;
+}
+
+export async function getOrCreateSection(
+  ctx: SiteContext,
+  params: {
+    key: string;
+    sectionType: string;
+    content: Record<string, unknown>;
+    sortOrder?: number;
+  },
+) {
+  const existing = (await listPageSections(ctx)).find((s) => s.key === params.key);
+  if (existing) return existing;
+  return createSection(ctx, params);
+}
+
+export async function uploadSiteMedia(params: {
+  file: File;
+  category: string;
+  altText?: string;
+}): Promise<UploadedMedia> {
+  const ctx = await getNaserCpaContext();
+  const token = await requireAccessToken();
+  const body = new FormData();
+  body.append("file", params.file);
+  const query = new URLSearchParams({ category: params.category });
+  if (params.altText) query.set("altText", params.altText);
+
+  const res = await apiFetch(
+    `/admin/businesses/${ctx.businessId}/sites/${ctx.siteId}/media?${query}`,
+    { method: "POST", body },
+    token,
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Upload failed (${res.status}): ${text}`);
+  }
+  return (await res.json()) as UploadedMedia;
 }
 
 export async function patchSectionContent(
