@@ -518,6 +518,33 @@ export function isDashboardSectionId(id: string): id is DashboardSectionId {
   return id in CMS_TARGETS;
 }
 
+/** Warn when a save succeeded but photos never got a CMS media id. */
+export function missingPhotoWarning(
+  sectionId: DashboardSectionId,
+  content: Record<string, unknown>,
+): string | null {
+  if (sectionId === "team") {
+    const members = asArray(content.members);
+    const missing = members.filter((m) => !isUuid(m.mediaId));
+    if (missing.length > 0) {
+      return "הטקסט נשמר, אבל התמונה לא הועלתה ל-CMS. המתינו עד שההעלאה מצליחה ואז שמרו שוב. בלי מזהה מדיה האתר החי יישאר עם התמונה הישנה.";
+    }
+  }
+  if (sectionId === "about" && !isUuid(content.mediaId)) {
+    return "נשמר בלי תמונה ב-CMS. העלו קובץ, המתינו להצלחה, ואז שמרו.";
+  }
+  if (sectionId === "hero" && !isUuid(content.backgroundMediaId)) {
+    return "נשמר בלי תמונת רקע ב-CMS. העלו קובץ, המתינו להצלחה, ואז שמרו.";
+  }
+  if (sectionId === "gallery") {
+    const items = asArray(content.items);
+    if (items.some((item) => !isUuid(item.mediaId))) {
+      return "נשמר בלי כל תמונות הגלריה ב-CMS. העלו שוב ואז שמרו.";
+    }
+  }
+  return null;
+}
+
 export function categoryFromSlot(slotKey: string): string {
   if (slotKey.startsWith("team.")) return "TEAM";
   if (slotKey.startsWith("gallery.")) return "GALLERY";

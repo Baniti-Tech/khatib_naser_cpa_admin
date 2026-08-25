@@ -11,6 +11,7 @@ import {
   CMS_TARGETS,
   editorToSectionContent,
   isDashboardSectionId,
+  missingPhotoWarning,
   sectionToEditor,
   type DashboardSectionId,
 } from "@/lib/cms-map";
@@ -131,7 +132,12 @@ export async function POST(request: Request) {
       });
     }
     await publishLiveSite(ctx);
-    return NextResponse.json({ ok: true, mode: "api" });
+    const warning = missingPhotoWarning(sectionId, content);
+    return NextResponse.json({
+      ok: true,
+      mode: "api",
+      warning: warning ?? undefined,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

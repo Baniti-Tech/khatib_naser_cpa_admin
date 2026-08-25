@@ -32,7 +32,10 @@ export async function POST(request: Request) {
       category: categoryFromSlot(slotKey),
       altText: slotKey,
     });
-    if (!media.id) {
+    const mediaId =
+      media.id ??
+      (media as { data?: { id?: string } }).data?.id;
+    if (!mediaId) {
       return NextResponse.json(
         { ok: false, error: "ההעלאה הצליחה אבל לא התקבל מזהה מדיה" },
         { status: 500 },
@@ -40,8 +43,8 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({
       ok: true,
-      mediaId: media.id,
-      publicUrl: mediaPreviewUrl(media.id),
+      mediaId,
+      publicUrl: mediaPreviewUrl(mediaId),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed";

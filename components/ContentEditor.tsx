@@ -17,6 +17,13 @@ export function ContentEditor({ section }: { section: ContentSection }) {
   const [mediaIds, setMediaIds] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<FieldStatus | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingSlots, setUploadingSlots] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [pendingSlots, setPendingSlots] = useState<Record<string, boolean>>(
+    {},
+  );
+  const uploadingCount = Object.values(uploadingSlots).filter(Boolean).length;
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +58,21 @@ export function ContentEditor({ section }: { section: ContentSection }) {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (uploadingCount > 0) {
+      setStatus({
+        type: "error",
+        message: "המתינו עד שהתמונה תעלה ואז לחצו שמור.",
+      });
+      return;
+    }
+    if (Object.values(pendingSlots).some(Boolean)) {
+      setStatus({
+        type: "error",
+        message:
+          "הקובץ שנבחר לא הועלה ל-CMS. בחרו שוב, המתינו להצלחה, ורק אז שמרו.",
+      });
+      return;
+    }
     setSaving(true);
     setStatus(null);
 
@@ -65,11 +87,13 @@ export function ContentEditor({ section }: { section: ContentSection }) {
         }),
       });
       const data = await res.json();
-      if (data.ok) {
+      if (data.ok && data.warning) {
+        setStatus({ type: "warning", message: data.warning });
+      } else if (data.ok) {
         setStatus({
           type: "success",
           message:
-            "נשמר במסד הנתונים של האתר החי. khatib-naser.co.il יתעדכן תוך עד דקה.",
+            "נשמר במסד הנתונים של האתר החי. רעננו את khatib-naser.co.il עכשיו.",
         });
       } else {
         setStatus({
@@ -124,7 +148,18 @@ export function ContentEditor({ section }: { section: ContentSection }) {
                 setValues((prev) => ({ ...prev, [field.key]: url }));
                 if (mediaId) {
                   setMediaIds((prev) => ({ ...prev, [field.key]: mediaId }));
+                  setPendingSlots((prev) => ({ ...prev, [field.key]: false }));
                 }
+              }}
+              onUploadState={({ uploading, filePending }) => {
+                setUploadingSlots((prev) => ({
+                  ...prev,
+                  [field.key]: uploading,
+                }));
+                setPendingSlots((prev) => ({
+                  ...prev,
+                  [field.key]: filePending,
+                }));
               }}
               onStatus={setStatus}
             />
@@ -160,10 +195,14 @@ export function ContentEditor({ section }: { section: ContentSection }) {
       <div className="flex items-center justify-end gap-4">
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || uploadingCount > 0}
           className="rounded-xl bg-brand-navy px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-dark disabled:opacity-60"
         >
-          {saving ? "שומר..." : "שמור לאתר החי"}
+          {saving
+            ? "שומר..."
+            : uploadingCount > 0
+              ? "מעלה תמונה..."
+              : "שמור לאתר החי"}
         </button>
       </div>
     </form>

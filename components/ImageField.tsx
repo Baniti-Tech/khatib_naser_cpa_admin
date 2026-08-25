@@ -12,6 +12,10 @@ type ImageFieldProps = {
   imageSlot?: string;
   onChange: (next: { url: string; mediaId?: string }) => void;
   onStatus: (status: FieldStatus) => void;
+  onUploadState?: (state: {
+    uploading: boolean;
+    filePending: boolean;
+  }) => void;
 };
 
 export function ImageField({
@@ -19,6 +23,7 @@ export function ImageField({
   imageSlot,
   onChange,
   onStatus,
+  onUploadState,
 }: ImageFieldProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,28 +63,39 @@ export function ImageField({
 
     if (!imageSlot) {
       onStatus({ type: "error", message: "חסר מזהה סלוט לתמונה" });
+      onUploadState?.({ uploading: false, filePending: true });
       return;
     }
 
     setUploading(true);
+    onUploadState?.({ uploading: true, filePending: true });
     onStatus({ type: "info", message: "מעלה את התמונה למסד הנתונים…" });
     try {
       const body = new FormData();
       body.append("file", file);
       body.append("slotKey", imageSlot);
       const res = await fetch("/api/upload", { method: "POST", body });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.ok && data.publicUrl && data.mediaId) {
         onChange({ url: data.publicUrl, mediaId: data.mediaId });
+        onUploadState?.({ uploading: false, filePending: false });
         onStatus({
           type: "success",
           message: "התמונה הועלתה. לחצו על שמור לאתר החי כדי לעדכן את האתר.",
         });
       } else {
-        onStatus({ type: "error", message: data.error ?? "העלאת התמונה נכשלה" });
+        onUploadState?.({ uploading: false, filePending: true });
+        onStatus({
+          type: "error",
+          message: data.error ?? "העלאת התמונה נכשלה — שמירה לא תעדכן את התמונה באתר.",
+        });
       }
     } catch {
-      onStatus({ type: "error", message: "העלאת התמונה נכשלה — בדקו את החיבור" });
+      onUploadState?.({ uploading: false, filePending: true });
+      onStatus({
+        type: "error",
+        message: "העלאת התמונה נכשלה — שמירה לא תעדכן את התמונה באתר.",
+      });
     } finally {
       setUploading(false);
     }

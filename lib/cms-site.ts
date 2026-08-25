@@ -122,7 +122,11 @@ export async function uploadSiteMedia(params: {
   const ctx = await getNaserCpaContext();
   const token = await requireAccessToken();
   const body = new FormData();
-  body.append("file", params.file);
+  const bytes = await params.file.arrayBuffer();
+  const blob = new Blob([bytes], {
+    type: params.file.type || "application/octet-stream",
+  });
+  body.append("file", blob, params.file.name || "upload.jpg");
   const query = new URLSearchParams({ category: params.category });
   if (params.altText) query.set("altText", params.altText);
 
