@@ -19,7 +19,26 @@ export type CmsSection = {
 export type UploadedMedia = {
   id: string;
   originalFilename?: string;
+  altText?: string | null;
+  status?: string;
+  createdAt?: string;
 };
+
+export async function listSiteMedia(ctx: SiteContext): Promise<UploadedMedia[]> {
+  const token = await requireAccessToken();
+  const res = await apiFetch(
+    `/admin/businesses/${ctx.businessId}/sites/${ctx.siteId}/media`,
+    {},
+    token,
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`List media failed (${res.status}): ${text}`);
+  }
+  const data = await res.json();
+  const items = Array.isArray(data) ? data : data.items ?? [];
+  return items as UploadedMedia[];
+}
 
 export async function getNaserCpaContext(): Promise<SiteContext> {
   const token = await requireAccessToken();

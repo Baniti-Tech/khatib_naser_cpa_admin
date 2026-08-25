@@ -56,34 +56,20 @@ export function ContentEditor({ section }: { section: ContentSection }) {
     };
   }, [section.id]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (uploadingCount > 0) {
-      setStatus({
-        type: "error",
-        message: "המתינו עד שהתמונה תעלה ואז לחצו שמור.",
-      });
-      return;
-    }
-    if (Object.values(pendingSlots).some(Boolean)) {
-      setStatus({
-        type: "error",
-        message:
-          "הקובץ שנבחר לא הועלה ל-CMS. בחרו שוב, המתינו להצלחה, ורק אז שמרו.",
-      });
-      return;
-    }
+  async function persist(
+    nextValues: Record<string, string>,
+    nextMediaIds: Record<string, string>,
+  ) {
     setSaving(true);
-    setStatus(null);
-
+    setStatus({ type: "info", message: "שומר את התמונה לאתר החי…" });
     try {
       const res = await fetch("/api/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sectionId: section.id,
-          values,
-          mediaIds,
+          values: nextValues,
+          mediaIds: nextMediaIds,
         }),
       });
       const data = await res.json();
@@ -101,11 +87,34 @@ export function ContentEditor({ section }: { section: ContentSection }) {
           message: data.error ?? "השמירה לאתר החי נכשלה.",
         });
       }
+      return Boolean(data.ok);
     } catch {
       setStatus({ type: "error", message: "שגיאת רשת — נסו שוב" });
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (uploadingCount > 0) {
+      setStatus({
+        type: "error",
+        message: "המתינו עד שהתמונה תעלה ואז לחצו שמור.",
+      });
+      return;
+    }
+    if (Object.values(pendingSlots).some(Boolean)) {
+      setStatus({
+        type: "error",
+        message:
+          "הקובץ שנבחר לא הועלה ל-CMS. בחרו שוב, המתינו להצלחה, ורק אז שמרו.",
+      });
+      return;
+    }
+    setStatus(null);
+    await persist(values, mediaIds);
   }
 
   const statusClass =
@@ -145,10 +154,13 @@ export function ContentEditor({ section }: { section: ContentSection }) {
               value={values[field.key] ?? ""}
               imageSlot={field.imageSlot}
               onChange={({ url, mediaId }) => {
-                setValues((prev) => ({ ...prev, [field.key]: url }));
+                const nextValues = { ...values, [field.key]: url };
+                setValues(nextValues);
                 if (mediaId) {
-                  setMediaIds((prev) => ({ ...prev, [field.key]: mediaId }));
+                  const nextMediaIds = { ...mediaIds, [field.key]: mediaId };
+                  setMediaIds(nextMediaIds);
                   setPendingSlots((prev) => ({ ...prev, [field.key]: false }));
+                  void persist(nextValues, nextMediaIds);
                 }
               }}
               onUploadState={({ uploading, filePending }) => {

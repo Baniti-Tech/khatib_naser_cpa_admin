@@ -7,6 +7,7 @@ import {
   patchSectionContent,
   publishLiveSite,
 } from "@/lib/cms-site";
+import { attachLatestUploads } from "@/lib/cms-attach";
 import {
   CMS_TARGETS,
   editorToSectionContent,
@@ -114,11 +115,15 @@ export async function POST(request: Request) {
     const target = CMS_TARGETS[sectionId];
     const existing =
       (await listPageSections(ctx)).find((s) => s.key === target.key) ?? null;
-    const content = editorToSectionContent(
+    const content = await attachLatestUploads(
+      ctx,
       sectionId,
-      body.values,
-      body.mediaIds ?? {},
-      existing?.content ?? target.defaultContent,
+      editorToSectionContent(
+        sectionId,
+        body.values,
+        body.mediaIds ?? {},
+        existing?.content ?? target.defaultContent,
+      ),
     );
 
     if (existing) {
