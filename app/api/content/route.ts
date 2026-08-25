@@ -11,6 +11,7 @@ import { attachLatestUploads } from "@/lib/cms-attach";
 import {
   CMS_TARGETS,
   editorToSectionContent,
+  editorToSectionSettings,
   isDashboardSectionId,
   missingPhotoWarning,
   sectionToEditor,
@@ -125,14 +126,24 @@ export async function POST(request: Request) {
         existing?.content ?? target.defaultContent,
       ),
     );
+    const settings = editorToSectionSettings(
+      sectionId,
+      body.values,
+      existing?.settings &&
+        typeof existing.settings === "object" &&
+        !Array.isArray(existing.settings)
+        ? existing.settings
+        : {},
+    );
 
     if (existing) {
-      await patchSectionContent(ctx, existing.id, content);
+      await patchSectionContent(ctx, existing.id, content, settings);
     } else {
       await createSection(ctx, {
         key: target.key,
         sectionType: target.sectionType,
         content,
+        settings,
         sortOrder: target.sortOrder,
       });
     }

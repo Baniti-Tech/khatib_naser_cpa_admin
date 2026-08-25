@@ -12,6 +12,7 @@ export type CmsSection = {
   key: string;
   sectionType: string;
   content: Record<string, unknown>;
+  settings?: Record<string, unknown>;
   sortOrder?: number;
   isEnabled?: boolean;
 };
@@ -94,6 +95,7 @@ export async function createSection(
     key: string;
     sectionType: string;
     content: Record<string, unknown>;
+    settings?: Record<string, unknown>;
     sortOrder?: number;
   },
 ) {
@@ -106,6 +108,7 @@ export async function createSection(
         key: params.key,
         sectionType: params.sectionType,
         content: params.content,
+        settings: params.settings ?? {},
         sortOrder: params.sortOrder ?? 0,
         isEnabled: true,
       }),
@@ -192,13 +195,16 @@ export async function patchSectionContent(
   ctx: SiteContext,
   sectionId: string,
   content: Record<string, unknown>,
+  settings?: Record<string, unknown>,
 ) {
   const token = await requireAccessToken();
   const res = await apiFetch(
     `/admin/businesses/${ctx.businessId}/sites/${ctx.siteId}/pages/${ctx.pageId}/sections/${sectionId}`,
     {
       method: "PATCH",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(
+        settings ? { content, settings } : { content },
+      ),
     },
     token,
   );

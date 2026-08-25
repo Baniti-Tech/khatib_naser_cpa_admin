@@ -213,6 +213,7 @@ export function sectionToEditor(
   fallbacks: Record<string, string>,
 ): { values: Record<string, string>; mediaIds: Record<string, string> } {
   const content = section?.content ?? {};
+  const settings = asRecord(section?.settings);
   const values: Record<string, string> = { ...fallbacks };
   const mediaIds: Record<string, string> = {};
 
@@ -222,6 +223,11 @@ export function sectionToEditor(
     values.headline2 = split.headline2 || fallbacks.headline2;
     values.subtitle = str(content.subtitle, fallbacks.subtitle);
     values.ctaPrimary = str(content.primaryButtonLabel, fallbacks.ctaPrimary);
+    values.badge = str(settings.badge, fallbacks.badge);
+    values.ctaWhatsapp = str(
+      settings.whatsappButtonLabel,
+      fallbacks.ctaWhatsapp,
+    );
     if (isUuid(content.backgroundMediaId)) {
       mediaIds.background = content.backgroundMediaId;
       values.background = mediaPreviewUrl(content.backgroundMediaId);
@@ -236,9 +242,14 @@ export function sectionToEditor(
       fallbacks.whatsappNumber ?? fallbacks.whatsapp,
     );
     values.title = str(content.title, fallbacks.title);
-    values.phoneDisplay = phone
-      .replace("+972", "0")
-      .replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
+    values.eyebrow = str(settings.eyebrow, fallbacks.eyebrow);
+    values.subtitle = str(settings.subtitle, fallbacks.subtitle);
+    values.name = str(settings.brandName, fallbacks.name);
+    values.tagline = str(settings.tagline, fallbacks.tagline);
+    values.phoneDisplay = str(
+      settings.phoneDisplay,
+      phone.replace("+972", "0").replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3"),
+    );
   }
 
   if (sectionId === "trust") {
@@ -252,7 +263,15 @@ export function sectionToEditor(
   }
 
   if (sectionId === "services") {
-    values.title = str(content.title, fallbacks.title);
+    values.eyebrow = str(settings.eyebrow, fallbacks.eyebrow);
+    const storedTitle = str(content.title);
+    values.title = str(
+      settings.heading,
+      storedTitle && storedTitle !== fallbacks.eyebrow
+        ? storedTitle
+        : fallbacks.title,
+    );
+    values.subtitle = str(settings.subtitle, fallbacks.subtitle);
     const items = asArray(content.items);
     if (items.length > 0) {
       values.items = JSON.stringify(items, null, 2);
@@ -260,6 +279,7 @@ export function sectionToEditor(
   }
 
   if (sectionId === "whyUs") {
+    values.eyebrow = str(settings.eyebrow, fallbacks.eyebrow);
     values.title = str(content.title, fallbacks.title);
     const body = str(content.body, fallbacks.subtitle);
     values.subtitle =
@@ -271,6 +291,7 @@ export function sectionToEditor(
   }
 
   if (sectionId === "about") {
+    values.eyebrow = str(settings.eyebrow, fallbacks.eyebrow);
     values.title = str(content.title, fallbacks.title);
     const body = str(content.body, fallbacks.paragraphs);
     values.paragraphs = body.replace(/\n{3,}/g, "\n\n");
@@ -281,6 +302,7 @@ export function sectionToEditor(
   }
 
   if (sectionId === "gallery") {
+    values.eyebrow = str(settings.eyebrow, fallbacks.eyebrow);
     values.title = str(content.title, fallbacks.title);
     const items = asArray(content.items);
     for (const slot of GALLERY_SLOTS) {
@@ -296,7 +318,9 @@ export function sectionToEditor(
   }
 
   if (sectionId === "team") {
+    values.eyebrow = str(settings.eyebrow, fallbacks.eyebrow);
     values.title = str(content.title, fallbacks.title);
+    values.subtitle = str(settings.subtitle, fallbacks.subtitle);
     const members = asArray(content.members);
     const osama =
       members.find((m) => m.key === "osama") ?? members[0] ?? {};
@@ -512,6 +536,51 @@ export function editorToSectionContent(
   }
 
   throw new Error(`Unsupported section: ${sectionId}`);
+}
+
+/** Extra labels the CMS Zod schemas strip from `content` (eyebrow, badge, etc.). */
+export function editorToSectionSettings(
+  sectionId: DashboardSectionId,
+  values: Record<string, string>,
+  existing: Record<string, unknown>,
+): Record<string, unknown> {
+  const settings = { ...existing };
+  const set = (key: string, value: string | undefined) => {
+    if (typeof value === "string") settings[key] = value;
+  };
+
+  if (sectionId === "hero") {
+    set("badge", values.badge);
+    set("whatsappButtonLabel", values.ctaWhatsapp);
+  }
+  if (sectionId === "services") {
+    set("eyebrow", values.eyebrow);
+    set("heading", values.title);
+    set("subtitle", values.subtitle);
+  }
+  if (sectionId === "whyUs") {
+    set("eyebrow", values.eyebrow);
+  }
+  if (sectionId === "about") {
+    set("eyebrow", values.eyebrow);
+  }
+  if (sectionId === "gallery") {
+    set("eyebrow", values.eyebrow);
+  }
+  if (sectionId === "team") {
+    set("eyebrow", values.eyebrow);
+    set("subtitle", values.subtitle);
+  }
+  if (sectionId === "contact") {
+    set("eyebrow", values.eyebrow);
+    set("subtitle", values.subtitle);
+  }
+  if (sectionId === "brand") {
+    set("brandName", values.name);
+    set("tagline", values.tagline);
+    set("phoneDisplay", values.phoneDisplay);
+  }
+  return settings;
 }
 
 export function isDashboardSectionId(id: string): id is DashboardSectionId {

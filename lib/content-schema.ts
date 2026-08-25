@@ -205,6 +205,13 @@ export const CONTENT_SECTIONS: ContentSection[] = [
       { key: "eyebrow", label: "תווית", type: "text", value: "הצוות שלנו" },
       { key: "title", label: "כותרת", type: "text", value: "הכירו את השותפים" },
       {
+        key: "subtitle",
+        label: "תיאור",
+        type: "textarea",
+        value:
+          "צוות מנוסה של רואי חשבון שמשלב מומחיות טכנית עם הבנה עמוקה של העולם העסקי — כדי לתת לכם את הליווי הטוב ביותר.",
+      },
+      {
         key: "osamaName",
         label: "אוסמה — שם",
         type: "text",
