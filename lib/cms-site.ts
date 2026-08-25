@@ -138,7 +138,7 @@ function formatUploadError(status: number, text: string): string {
 }
 
 export async function uploadSiteMedia(params: {
-  file: Blob & { name?: string; type: string };
+  file: File;
   category: string;
   altText?: string;
 }): Promise<UploadedMedia> {

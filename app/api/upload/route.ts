@@ -5,16 +5,9 @@ import { categoryFromSlot, mediaPreviewUrl } from "@/lib/cms-map";
 
 export const runtime = "nodejs";
 
-function isUploadBlob(
-  value: FormDataEntryValue | null,
-): value is Blob & { name?: string } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Blob).arrayBuffer === "function" &&
-    typeof (value as Blob).size === "number" &&
-    (value as Blob).size > 0
-  );
+function isUploadFile(value: FormDataEntryValue | null): value is File {
+  if (value == null || typeof value === "string") return false;
+  return typeof value.arrayBuffer === "function" && value.size > 0;
 }
 
 export async function POST(request: Request) {
@@ -33,7 +26,7 @@ export async function POST(request: Request) {
   const file = form.get("file");
   const slotKey = String(form.get("slotKey") ?? "");
 
-  if (!isUploadBlob(file) || !slotKey) {
+  if (!isUploadFile(file) || !slotKey) {
     return NextResponse.json(
       {
         ok: false,
