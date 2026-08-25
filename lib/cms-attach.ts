@@ -15,30 +15,60 @@ function latestIdForAlt(
   return match?.id ?? null;
 }
 
+function membersOf(content: Record<string, unknown>) {
+  return Array.isArray(content.members)
+    ? (content.members as Record<string, unknown>[])
+    : [];
+}
+
+function itemsOf(content: Record<string, unknown>) {
+  return Array.isArray(content.items)
+    ? (content.items as Record<string, unknown>[])
+    : [];
+}
+
+function needsMediaLookup(
+  sectionId: DashboardSectionId,
+  content: Record<string, unknown>,
+): boolean {
+  if (sectionId === "team") {
+    return membersOf(content).some(
+      (member) =>
+        (member.key === "khalid" || member.key === "osama") &&
+        !isUuid(member.mediaId),
+    );
+  }
+  if (sectionId === "about") return !isUuid(content.mediaId);
+  if (sectionId === "hero") return !isUuid(content.backgroundMediaId);
+  if (sectionId === "gallery") {
+    return itemsOf(content).some((item) => !isUuid(item.mediaId));
+  }
+  return false;
+}
+
 /** If the editor did not send a media id, use the latest upload for that slot. */
 export async function attachLatestUploads(
   ctx: SiteContext,
   sectionId: DashboardSectionId,
   content: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  if (
-    sectionId !== "team" &&
-    sectionId !== "about" &&
-    sectionId !== "hero" &&
-    sectionId !== "gallery"
-  ) {
+  if (!needsMediaLookup(sectionId, content)) {
     return content;
   }
 
-  const media = await listSiteMedia(ctx);
+  let media: Array<{ id: string; altText?: string | null; status?: string }> =
+    [];
+  try {
+    media = await listSiteMedia(ctx);
+  } catch (err) {
+    console.error("[cms-attach] list media failed, saving without lookup", err);
+    return content;
+  }
 
   if (sectionId === "team") {
-    const members = Array.isArray(content.members)
-      ? (content.members as Record<string, unknown>[])
-      : [];
     return {
       ...content,
-      members: members.map((member) => {
+      members: membersOf(content).map((member) => {
         if (isUuid(member.mediaId)) return member;
         const slot =
           member.key === "khalid"
@@ -64,12 +94,9 @@ export async function attachLatestUploads(
   }
 
   if (sectionId === "gallery") {
-    const items = Array.isArray(content.items)
-      ? (content.items as Record<string, unknown>[])
-      : [];
     return {
       ...content,
-      items: items.map((item) => {
+      items: itemsOf(content).map((item) => {
         if (isUuid(item.mediaId)) return item;
         const slot =
           typeof item.key === "string" ? `gallery.${item.key}` : null;
