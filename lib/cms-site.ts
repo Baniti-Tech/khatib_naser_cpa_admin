@@ -158,3 +158,33 @@ export async function patchSectionContent(
   }
   return res.json();
 }
+
+export async function publishLiveSite(ctx: SiteContext) {
+  const token = await requireAccessToken();
+
+  const siteRes = await apiFetch(
+    `/admin/businesses/${ctx.businessId}/sites/${ctx.siteId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status: "PUBLISHED" }),
+    },
+    token,
+  );
+  if (!siteRes.ok) {
+    const text = await siteRes.text();
+    throw new Error(`Publish site failed (${siteRes.status}): ${text}`);
+  }
+
+  const pageRes = await apiFetch(
+    `/admin/businesses/${ctx.businessId}/sites/${ctx.siteId}/pages/${ctx.pageId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status: "PUBLISHED" }),
+    },
+    token,
+  );
+  if (!pageRes.ok) {
+    const text = await pageRes.text();
+    throw new Error(`Publish page failed (${pageRes.status}): ${text}`);
+  }
+}

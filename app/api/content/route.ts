@@ -5,6 +5,7 @@ import {
   getNaserCpaContext,
   listPageSections,
   patchSectionContent,
+  publishLiveSite,
 } from "@/lib/cms-site";
 import {
   CMS_TARGETS,
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
         sortOrder: target.sortOrder,
       });
     }
+    await publishLiveSite(ctx);
     return NextResponse.json({ ok: true, mode: "api" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";

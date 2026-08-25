@@ -11,6 +11,22 @@ export function mediaPreviewUrl(mediaId: string) {
   return `/api/media/${mediaId}`;
 }
 
+/** Prefer explicit mediaIds, then /api/media/<uuid> in the field value. */
+export function resolveMediaId(
+  mediaIds: Record<string, string>,
+  field: string,
+  values: Record<string, string>,
+  existing?: unknown,
+): string | null {
+  if (isUuid(mediaIds[field])) return mediaIds[field];
+  const fromUrl = values[field]?.match(
+    /\/(?:api\/media|public\/media)\/([0-9a-f-]{36})/i,
+  )?.[1];
+  if (isUuid(fromUrl)) return fromUrl;
+  if (isUuid(existing)) return existing;
+  return null;
+}
+
 export type DashboardSectionId =
   | "brand"
   | "hero"
@@ -316,12 +332,12 @@ export function editorToSectionContent(
       .filter(Boolean)
       .join(" ")
       .trim();
-    const backgroundMediaId =
-      mediaIds.background && isUuid(mediaIds.background)
-        ? mediaIds.background
-        : isUuid(existing.backgroundMediaId)
-          ? existing.backgroundMediaId
-          : null;
+    const backgroundMediaId = resolveMediaId(
+      mediaIds,
+      "background",
+      values,
+      existing.backgroundMediaId,
+    );
     const buttonUrlRaw = str(existing.primaryButtonUrl);
     let primaryButtonUrl = "https://khatib-naser.co.il/#contact";
     try {
@@ -420,12 +436,12 @@ export function editorToSectionContent(
     return {
       title: values.title || str(existing.title, "שותפים לדרך של הצלחה"),
       body: values.paragraphs || str(existing.body),
-      mediaId:
-        mediaIds.image && isUuid(mediaIds.image)
-          ? mediaIds.image
-          : isUuid(existing.mediaId)
-            ? existing.mediaId
-            : null,
+      mediaId: resolveMediaId(
+        mediaIds,
+        "image",
+        values,
+        existing.mediaId,
+      ),
     };
   }
 
@@ -434,12 +450,12 @@ export function editorToSectionContent(
     const items = GALLERY_SLOTS.map((slot) => {
       const prev =
         existingItems.find((item) => item.key === slot.key) ?? {};
-      const mediaId =
-        mediaIds[slot.field] && isUuid(mediaIds[slot.field])
-          ? mediaIds[slot.field]
-          : isUuid(prev.mediaId)
-            ? prev.mediaId
-            : null;
+      const mediaId = resolveMediaId(
+        mediaIds,
+        slot.field,
+        values,
+        prev.mediaId,
+      );
       if (!mediaId) return null;
       return {
         key: slot.key,
@@ -474,12 +490,12 @@ export function editorToSectionContent(
         name: values[`${prefix}Name`] || str(prev.name),
         role: values[`${prefix}Role`] || str(prev.role),
         bio: values[`${prefix}Bio`] || str(prev.bio),
-        mediaId:
-          mediaIds[imageKey] && isUuid(mediaIds[imageKey])
-            ? mediaIds[imageKey]
-            : isUuid(prev.mediaId)
-              ? prev.mediaId
-              : null,
+        mediaId: resolveMediaId(
+          mediaIds,
+          imageKey,
+          values,
+          prev.mediaId,
+        ),
       };
     };
     const others = existingMembers.filter(
