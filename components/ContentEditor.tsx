@@ -195,14 +195,20 @@ export function ContentEditor({ section }: { section: ContentSection }) {
       <div className="flex items-center justify-end gap-4">
         <button
           type="submit"
-          disabled={saving || uploadingCount > 0}
+          disabled={
+            saving ||
+            uploadingCount > 0 ||
+            Object.values(pendingSlots).some(Boolean)
+          }
           className="rounded-xl bg-brand-navy px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-dark disabled:opacity-60"
         >
           {saving
             ? "שומר..."
             : uploadingCount > 0
               ? "מעלה תמונה..."
-              : "שמור לאתר החי"}
+              : Object.values(pendingSlots).some(Boolean)
+                ? "המתינו להעלאה"
+                : "שמור לאתר החי"}
         </button>
       </div>
     </form>

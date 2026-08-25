@@ -33,6 +33,7 @@ export function ImageField({
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [broken, setBroken] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     setBroken(false);
@@ -47,11 +48,15 @@ export function ImageField({
   const displaySrc = preview || value;
 
   async function handleFile(file: File) {
-    if (!file.type.startsWith("image/")) {
+    const looksLikeImage =
+      file.type.startsWith("image/") ||
+      /\.(jpe?g|png|webp|gif)$/i.test(file.name);
+    if (!looksLikeImage) {
       onStatus({
         type: "error",
         message: "יש לבחור קובץ תמונה (JPG, PNG או WebP)",
       });
+      onUploadState?.({ uploading: false, filePending: true });
       return;
     }
 
@@ -60,6 +65,7 @@ export function ImageField({
     objectUrlRef.current = localUrl;
     setPreview(localUrl);
     setFileName(file.name);
+    setLocalError(null);
 
     if (!imageSlot) {
       onStatus({ type: "error", message: "חסר מזהה סלוט לתמונה" });
@@ -79,23 +85,23 @@ export function ImageField({
       if (data.ok && data.publicUrl && data.mediaId) {
         onChange({ url: data.publicUrl, mediaId: data.mediaId });
         onUploadState?.({ uploading: false, filePending: false });
+        setLocalError(null);
         onStatus({
           type: "success",
           message: "התמונה הועלתה. לחצו על שמור לאתר החי כדי לעדכן את האתר.",
         });
       } else {
+        const message =
+          data.error ?? "העלאת התמונה נכשלה — שמירה לא תעדכן את התמונה באתר.";
         onUploadState?.({ uploading: false, filePending: true });
-        onStatus({
-          type: "error",
-          message: data.error ?? "העלאת התמונה נכשלה — שמירה לא תעדכן את התמונה באתר.",
-        });
+        setLocalError(message);
+        onStatus({ type: "error", message });
       }
     } catch {
+      const message = "העלאת התמונה נכשלה — שמירה לא תעדכן את התמונה באתר.";
       onUploadState?.({ uploading: false, filePending: true });
-      onStatus({
-        type: "error",
-        message: "העלאת התמונה נכשלה — שמירה לא תעדכן את התמונה באתר.",
-      });
+      setLocalError(message);
+      onStatus({ type: "error", message });
     } finally {
       setUploading(false);
     }
@@ -124,7 +130,7 @@ export function ImageField({
         ref={inputRef}
         id={inputId}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
         className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -169,6 +175,11 @@ export function ImageField({
         {fileName ? (
           <span className="mt-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-brand-navy">
             נבחר: {fileName}
+          </span>
+        ) : null}
+        {localError ? (
+          <span className="mt-2 max-w-md text-xs font-medium text-red-700">
+            {localError}
           </span>
         ) : null}
       </div>

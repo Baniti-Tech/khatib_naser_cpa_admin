@@ -132,7 +132,11 @@ export async function POST(request: Request) {
       });
     }
     await publishLiveSite(ctx);
-    const warning = missingPhotoWarning(sectionId, content);
+    const warning = missingPhotoWarning(
+      sectionId,
+      content,
+      body.mediaIds ?? {},
+    );
     return NextResponse.json({
       ok: true,
       mode: "api",

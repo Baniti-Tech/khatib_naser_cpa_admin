@@ -114,19 +114,46 @@ export async function getOrCreateSection(
   return createSection(ctx, params);
 }
 
+function normalizeImageMime(type: string, filename: string): string {
+  const mime = type.toLowerCase();
+  if (mime === "image/jpg" || mime === "image/pjpeg") return "image/jpeg";
+  if (mime === "image/jpeg" || mime === "image/png" || mime === "image/webp") {
+    return mime;
+  }
+  const name = filename.toLowerCase();
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
+
+function formatUploadError(status: number, text: string): string {
+  try {
+    const json = JSON.parse(text) as { message?: unknown; error?: unknown };
+    const raw = json.message ?? json.error ?? text;
+    const message = Array.isArray(raw) ? raw.join(", ") : String(raw);
+    return `העלאה נכשלה (${status}): ${message}`;
+  } catch {
+    return `העלאה נכשלה (${status}): ${text.slice(0, 240)}`;
+  }
+}
+
 export async function uploadSiteMedia(params: {
-  file: File;
+  file: Blob & { name?: string; type: string };
   category: string;
   altText?: string;
 }): Promise<UploadedMedia> {
   const ctx = await getNaserCpaContext();
   const token = await requireAccessToken();
-  const body = new FormData();
+  const filename = params.file.name || "upload.jpg";
+  const mime = normalizeImageMime(params.file.type || "", filename);
   const bytes = await params.file.arrayBuffer();
-  const blob = new Blob([bytes], {
-    type: params.file.type || "application/octet-stream",
-  });
-  body.append("file", blob, params.file.name || "upload.jpg");
+  if (bytes.byteLength === 0) {
+    throw new Error("הקובץ שהתקבל ריק. בחרו את התמונה שוב.");
+  }
+  const uploadFile = new File([bytes], filename, { type: mime });
+
+  const body = new FormData();
+  body.append("file", uploadFile, filename);
   const query = new URLSearchParams({ category: params.category });
   if (params.altText) query.set("altText", params.altText);
 
@@ -137,7 +164,7 @@ export async function uploadSiteMedia(params: {
   );
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Upload failed (${res.status}): ${text}`);
+    throw new Error(formatUploadError(res.status, text));
   }
   return (await res.json()) as UploadedMedia;
 }

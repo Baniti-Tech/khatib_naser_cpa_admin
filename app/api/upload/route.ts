@@ -3,6 +3,20 @@ import { isApiConfigured } from "@/lib/cloud-run";
 import { uploadSiteMedia } from "@/lib/cms-site";
 import { categoryFromSlot, mediaPreviewUrl } from "@/lib/cms-map";
 
+export const runtime = "nodejs";
+
+function isUploadBlob(
+  value: FormDataEntryValue | null,
+): value is Blob & { name?: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Blob).arrayBuffer === "function" &&
+    typeof (value as Blob).size === "number" &&
+    (value as Blob).size > 0
+  );
+}
+
 export async function POST(request: Request) {
   if (!isApiConfigured()) {
     return NextResponse.json(
@@ -19,9 +33,13 @@ export async function POST(request: Request) {
   const file = form.get("file");
   const slotKey = String(form.get("slotKey") ?? "");
 
-  if (!(file instanceof File) || !slotKey) {
+  if (!isUploadBlob(file) || !slotKey) {
     return NextResponse.json(
-      { ok: false, error: "file and slotKey are required" },
+      {
+        ok: false,
+        error:
+          "הקובץ לא הגיע לשרת. בחרו JPG, PNG או WebP ונסו שוב.",
+      },
       { status: 400 },
     );
   }

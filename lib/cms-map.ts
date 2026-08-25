@@ -518,27 +518,52 @@ export function isDashboardSectionId(id: string): id is DashboardSectionId {
   return id in CMS_TARGETS;
 }
 
-/** Warn when a save succeeded but photos never got a CMS media id. */
+/** Warn only when this save tried to attach a photo and it did not land. */
 export function missingPhotoWarning(
   sectionId: DashboardSectionId,
   content: Record<string, unknown>,
+  attemptedMediaIds: Record<string, string>,
 ): string | null {
+  const tried = (field: string) => isUuid(attemptedMediaIds[field]);
+
   if (sectionId === "team") {
     const members = asArray(content.members);
-    const missing = members.filter((m) => !isUuid(m.mediaId));
-    if (missing.length > 0) {
-      return "הטקסט נשמר, אבל התמונה לא הועלתה ל-CMS. המתינו עד שההעלאה מצליחה ואז שמרו שוב. בלי מזהה מדיה האתר החי יישאר עם התמונה הישנה.";
+    const failed: string[] = [];
+    if (tried("osamaImage")) {
+      const osama = members.find((m) => m.key === "osama");
+      if (!isUuid(osama?.mediaId)) failed.push("אוסמה");
+    }
+    if (tried("khalidImage")) {
+      const khalid = members.find((m) => m.key === "khalid");
+      if (!isUuid(khalid?.mediaId)) failed.push("ח'אלד");
+    }
+    if (failed.length > 0) {
+      return `השמירה הצליחה, אבל תמונת ${failed.join(" ו")} לא נקלטה ב-CMS. בחרו את הקובץ שוב, המתינו להודעת "התמונה הועלתה", ורק אז שמרו.`;
     }
   }
-  if (sectionId === "about" && !isUuid(content.mediaId)) {
+  if (sectionId === "about" && tried("image") && !isUuid(content.mediaId)) {
     return "נשמר בלי תמונה ב-CMS. העלו קובץ, המתינו להצלחה, ואז שמרו.";
   }
-  if (sectionId === "hero" && !isUuid(content.backgroundMediaId)) {
+  if (
+    sectionId === "hero" &&
+    tried("background") &&
+    !isUuid(content.backgroundMediaId)
+  ) {
     return "נשמר בלי תמונת רקע ב-CMS. העלו קובץ, המתינו להצלחה, ואז שמרו.";
   }
   if (sectionId === "gallery") {
     const items = asArray(content.items);
-    if (items.some((item) => !isUuid(item.mediaId))) {
+    const slots = [
+      { field: "reception", key: "reception" },
+      { field: "meeting", key: "meeting" },
+      { field: "hallway", key: "hallway" },
+    ];
+    const failed = slots.filter((slot) => {
+      if (!tried(slot.field)) return false;
+      const item = items.find((row) => row.key === slot.key);
+      return !isUuid(item?.mediaId);
+    });
+    if (failed.length > 0) {
       return "נשמר בלי כל תמונות הגלריה ב-CMS. העלו שוב ואז שמרו.";
     }
   }
